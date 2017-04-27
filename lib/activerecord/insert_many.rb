@@ -53,15 +53,15 @@ module ActiveRecord
       if conflict = options[:on_conflict]
         raise ArgumentError, "To use the :on_conflict option, you must be using Postgres >= 9.5" unless supports_on_conflict?
 
-        conflict_column = conflict.fetch(:column, schema_cache.primary_keys(table_name))
-        raise ArgumentError, "To use the :on_conflict option, you must specify :column" unless conflict_column
+        conflict_columns = conflict.fetch(:column, schema_cache.primary_keys(table_name))
+        raise ArgumentError, "To use the :on_conflict option, you must specify :column" unless conflict_columns
 
-        conflict_column = quote_column_name(conflict_column)
+        conflict_columns = Array(conflict_columns).map{ |c| quote_column_name(c) }
         case conflict_do = conflict.fetch(:do)
         when :nothing
-          sql << " ON CONFLICT(#{conflict_column}) DO NOTHING"
+          sql << " ON CONFLICT(#{conflict_columns.join(', ')}) DO NOTHING"
         when :update
-          sql << " ON CONFLICT(#{conflict_column}) DO UPDATE SET #{(key_list - [conflict_column]).map { |key| "#{key} = excluded.#{key}" }.join(", ")}"
+          sql << " ON CONFLICT(#{conflict_columns.join(', ')}) DO UPDATE SET #{(key_list - conflict_columns).map { |key| "#{key} = excluded.#{key}" }.join(", ")}"
         else
           raise ArgumentError, "#{conflict_do.inspect} is an unknown value for conflict[:do]; must be :nothing or :update"
         end
